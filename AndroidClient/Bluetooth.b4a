@@ -1,0 +1,157 @@
+﻿Build1=Default,com.pacchetto
+File1=1.bal
+File2=2.bal
+File3=3.bal
+File4=back_selected.png
+File5=back-normal.png
+FileGroup1=Default Group
+FileGroup2=Default Group
+FileGroup3=Default Group
+FileGroup4=Default Group
+FileGroup5=Default Group
+Group=Default Group
+IconFile=
+Library1=core
+Library2=randomaccessfile
+Library3=serial
+Library4=phone
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: http://www.b4x.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="14" android:targetSdkVersion="25"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true" ~\n~    android:anyDensity="true"/>)~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~SetApplicationAttribute(android:theme, "@android:style/Theme.Material.Wallpaper")~\n~'End of default text.~\n~
+Module1=controls
+Module2=keyboard
+NumberOfFiles=5
+NumberOfLibraries=4
+NumberOfModules=2
+Version=7.8
+@EndOfDesignText@
+#Region Module Attributes
+	#FullScreen: False
+	#IncludeTitle: False
+	#ApplicationLabel: Bluetooth Media Remote
+	#VersionCode: 2
+	#VersionName: RC
+	#SupportedOrientations: unspecified
+	#CanInstallToExternalStorage: False
+	#AdditionalJar: com.android.support:support-v4
+#End Region
+
+'Activity module
+Sub Process_Globals
+	Dim admin As BluetoothAdmin
+	Dim serial1 As Serial
+	Dim foundDevices As List
+	Type NameAndMac (Name As String, Mac As String)
+	Dim connectedDevice As NameAndMac
+	Dim vib As PhoneVibrate
+	Dim vibDuration As Long = 25
+End Sub
+
+Sub Globals
+	Dim btnSearchForDevices As Button
+	Dim btnAllowConnection As Button
+	
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	If FirstTime Then
+		admin.Initialize("admin")
+		serial1.Initialize("serial1")
+	End If
+	Activity.LoadLayout("1")
+
+
+	
+	Dim i As Intent
+	i.Initialize("android.bluetooth.adapter.action.REQUEST_DISCOVERABLE", "")
+	i.PutExtra("android.bluetooth.adapter.extra.DISCOVERABLE_DURATION", 600)
+	StartActivity(i)
+	ToastMessageShow("Attendo connessioni...", True)
+	serial1.Listen
+	
+End Sub
+
+
+Sub Activity_Resume
+	btnSearchForDevices.Enabled = False
+	btnAllowConnection.Enabled = False
+	If admin.IsEnabled = False Then
+		If admin.Enable = False Then 
+			ToastMessageShow("Error enabling Bluetooth adapter.", True)
+		Else
+			ToastMessageShow("Enabling Bluetooth adapter...", False)
+			'the StateChanged event will be soon raised
+		End If
+	Else
+		Admin_StateChanged(admin.STATE_ON, 0)
+	End If
+End Sub
+
+Sub Admin_StateChanged (NewState As Int, OldState As Int)
+	btnSearchForDevices.Enabled = (NewState = admin.STATE_ON)
+	btnAllowConnection.Enabled = btnSearchForDevices.Enabled
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+	If UserClosed = True Then
+		serial1.Disconnect
+	End If
+End Sub
+
+Sub btnSearchForDevices_Click
+	foundDevices.Initialize
+	If admin.StartDiscovery	= False Then 
+		ToastMessageShow("Error starting discovery process.", True)
+	Else
+		ProgressDialogShow("Cerco computer nelle vicinanze...")
+	End If
+End Sub
+
+Sub Admin_DiscoveryFinished
+	ProgressDialogHide
+	If foundDevices.Size = 0 Then
+		ToastMessageShow("Nessun dispositivo trovato.", True)
+	Else
+		Dim l As List
+		l.Initialize
+		For i = 0 To foundDevices.Size - 1
+			Dim nm As NameAndMac
+			nm = foundDevices.Get(i)
+			l.Add(nm.Name)
+		Next
+		Dim res As Int
+		res = InputList(l, "Scegli a quale dispositivo collegarti", -1)
+		If res <> DialogResponse.CANCEL Then
+			connectedDevice = foundDevices.Get(res)
+			ProgressDialogShow("Provo a connettermi a : " & connectedDevice.Name & " (" & connectedDevice.Mac & ")")
+			serial1.Connect(connectedDevice.Mac)
+		End If
+	End If
+End Sub
+
+Sub Admin_DeviceFound (Name As String, MacAddress As String)
+	Log(Name & ":" & MacAddress)
+	Dim nm As NameAndMac
+	nm.Name = Name
+	nm.Mac = MacAddress
+	foundDevices.Add(nm)
+	ProgressDialogShow("Cerco dispositivi (~ trovato)...".Replace("~", foundDevices.Size))
+End Sub
+
+Sub btnAllowConnection_Click
+'	'this intent makes the device discoverable for 300 seconds.
+'	
+
+End Sub
+
+Sub Serial1_Connected (Success As Boolean)
+	Log(Success)
+	ProgressDialogHide
+	
+	If Success = False Then
+		Log(LastException.Message)
+		ToastMessageShow("Errore di connessione : " & LastException.Message, True)
+	Else
+		StartActivity(controls)
+		vib.Vibrate(vibDuration)
+	End If
+	
+End Sub

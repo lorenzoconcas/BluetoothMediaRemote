@@ -1,0 +1,233 @@
+﻿AppType=JavaFX
+Build1=Default,com.loreconcas.btmr
+File1=1.bjl
+File2=icon.png
+FileGroup1=Default Group
+FileGroup2=Default Group
+Group=Default Group
+Library1=jcore
+Library2=jfx
+Library3=jshell
+Library4=jbluetooth
+Library5=jrandomaccessfile
+Library6=javaobject
+NumberOfFiles=2
+NumberOfLibraries=6
+NumberOfModules=0
+Version=6.01
+@EndOfDesignText@
+#Region Project Attributes 
+	#MainFormWidth: 360
+	#MainFormHeight: 400 
+#End Region
+
+Sub Process_Globals
+	Private fx As JFX
+	Private MainForm As Form
+
+	Private bt As Bluetooth
+	Private ListView1 As ListView
+	Private btnSearch As Button
+	Private lblConnectionState As Label
+	Private btnConnect As Button
+	Private btnDisconnect As Button
+	Private lblSearchState As Label
+	
+	Private connected As Boolean
+	Private searchingForDevices As Boolean
+	Private currentConnection As BluetoothConnection
+	Private astream As AsyncStreams
+	Private foundDevices As Map
+	
+	Private mode As Int = 0
+	Private robot As JavaObject
+	
+End Sub
+
+Sub AppStart (Form1 As Form, Args() As String)
+	
+	MainForm = Form1
+	MainForm.Icon = fx.LoadImage(File.DirAssets, "icon.png")
+	MainForm.RootPane.LoadLayout("1") 'Load the layout file.
+	MainForm.Show
+	MainForm.Title = "Bluetooth Media Remote"
+	
+	bt.Initialize("bt")
+	If bt.IsEnabled Then
+		bt.Listen
+	End If
+	
+	foundDevices.Initialize
+	UpdateState
+	
+	Dim jo As JavaObject
+	jo.InitializeStatic("com.sun.glass.ui.Application")
+	robot = jo.RunMethodJO("GetApplication", Null).RunMethodJO("createRobot", Null)
+	
+	
+
+End Sub
+
+'Return true to allow the default exceptions handler to handle the uncaught exception.
+Sub Application_Error (Error As Exception, StackTrace As String) As Boolean
+	Return True
+End Sub
+
+Private Sub UpdateState
+	If bt.IsEnabled = False Then
+		lblSearchState.Text = "Bluetooth not available"
+		For Each n As Node In MainForm.RootPane
+			n.Enabled = False
+		Next
+	Else
+		
+		btnSearch.Enabled = Not(searchingForDevices)
+		
+		btnConnect.Enabled = True
+		Log(btnConnect.Enabled)
+		btnDisconnect.Enabled = True
+		Dim state As String
+		If connected Then
+			state = "Connected: " & currentConnection.Name
+		Else
+			state = "Disconnected"
+		End If
+		lblConnectionState.Text = state
+		lblSearchState.Text = "Searching..."
+		lblSearchState.Visible = searchingForDevices
+	End If
+End Sub
+
+Private Sub btnSearch_Action
+	Dim res As Boolean = bt.StartDiscovery
+	If res Then
+		searchingForDevices = True
+		ListView1.Items.Clear
+		UpdateState
+	Else
+		Log("Error starting discovery")
+	End If
+End Sub
+
+Private Sub bt_DeviceFound (Name As String, MacAddress As String)
+	Dim description As String = Name & ": " & MacAddress
+	ListView1.Items.Add(description)
+	foundDevices.Put(description, MacAddress)
+End Sub
+
+Private Sub bt_DiscoveryFinished
+	searchingForDevices = False
+	UpdateState
+End Sub
+
+Private Sub btnConnect_Action
+	Dim address As String = foundDevices.Get(ListView1.SelectedItem)
+	Log(ListView1.SelectedItem)
+	bt.Connect(address)
+	
+End Sub
+
+Private Sub bt_Connected (Success As Boolean, connection As BluetoothConnection)
+	Log($"Connected, success=${Success}"$)
+	If Success Then
+		currentConnection = connection
+		connected = True
+		If astream.IsInitialized Then astream.Close
+		astream.InitializePrefix(connection.InputStream, True, connection.OutputStream, "AStream")
+	End If
+	bt.Listen
+	UpdateState
+	
+End Sub
+
+
+Sub AStream_NewData (Buffer() As Byte)
+	Dim command As String = BytesToString(Buffer, 0, Buffer.Length, "UTF8")
+	
+	If(Not(command == "")) Then
+		If(command == "keyboard") Then
+			mode = 1
+		else if (command == "media") Then
+			mode = 0
+		else if (command = "mouse") Then 
+			
+			mode = 2
+		else if (command == "scrof") Then
+			scrof
+		Else
+			If(mode == 1) Then
+				keyStroke(command)
+			Else if ( mode =  2) Then
+				mouse(command)
+			Else if ( mode == 0) Then
+				shTest(command)
+			End If		
+		End If		
+	End If
+End Sub
+
+Sub scrof
+	
+	Dim candidateArg As List
+	candidateArg.Initialize
+	candidateArg.Add("")
+	Dim sh As Shell
+	Dim pathToExe As String = File.Combine(File.DirApp, "scrof.exe")
+	sh.Initialize("test", pathToExe, candidateArg)
+	sh.RunSynchronous(-1)
+End Sub
+
+Sub AStream_Error
+	connected = False
+	UpdateState
+End Sub
+
+Sub AStream_Terminated
+	AStream_Error
+End Sub
+
+Sub mouse(command As String)
+	Dim x , y As Int
+	Dim p As Int
+	'calcolare x e y
+'	Dim tmp As String 
+'	tmp = command.ge
+	For i = 0 To command.Length-1
+		If command.CharAt(i) == "-" Then
+			p = i ' p è la posizione del trattino
+			
+		End If
+	Next
+	
+	'Log(command.SubString2(0, p))
+'	Log(x)
+'	y = command.SubString2(p, command.Length-1)
+	x = fx.PrimaryScreen.MaxX/100*command.SubString2(0, p)
+	Log("Y : "&command.SubString2(p+1, command.Length))
+	y = fx.PrimaryScreen.MaxY/100*command.SubString2(p+1, command.Length)
+	Log("Pos : "&x&"-"&y)
+	robot.RunMethod("mouseMove", Array As Object(x, y))
+End Sub
+Sub keyStroke(command As String)
+	Log(command)
+	Dim candidateArg As List
+	candidateArg.Initialize
+	candidateArg.Add(command)
+	Dim sh As Shell
+	Dim pathToExe As String = File.Combine(File.DirApp, "keyboardExecuter.exe")
+	sh.Initialize("test", pathToExe, candidateArg)
+	sh.RunSynchronous(-1)
+End Sub
+
+Sub shTest(id As Int)
+	Dim argList As List
+	argList.Initialize
+	argList.AddAll(Array As String("play", "pause", "next", "prev", "VUP", "VDOWN", "VMUTE", ""))
+	Dim candidateArg As List
+	candidateArg.Initialize
+	candidateArg.Add(argList.Get(id))
+	Dim sh As Shell
+	Dim pathToExe As String = File.Combine(File.DirApp, "MediaExecuter.exe")
+	sh.Initialize("test", pathToExe, candidateArg)
+	sh.RunSynchronous(-1)
+End Sub

@@ -1,0 +1,5 @@
+C:\Users\lorec\Source\Repos\MediaExecuter\MediaExecuter\bin\Debug\MediaExecuter.exe
+C:\Users\lorec\Source\Repos\MediaExecuter\MediaExecuter\bin\Debug\MediaExecuter.pdb
+C:\Users\lorec\Source\Repos\MediaExecuter\MediaExecuter\obj\Debug\MediaExecuter.csproj.CoreCompileInputs.cache
+C:\Users\lorec\Source\Repos\MediaExecuter\MediaExecuter\obj\Debug\MediaExecuter.exe
+C:\Users\lorec\Source\Repos\MediaExecuter\MediaExecuter\obj\Debug\MediaExecuter.pdb

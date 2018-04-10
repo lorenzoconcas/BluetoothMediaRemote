@@ -1,0 +1,6 @@
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\bin\Debug\KeyboardExecuter.exe
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\bin\Debug\KeyboardExecuter.pdb
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\obj\Debug\KeyboardExecuter.csprojResolveAssemblyReference.cache
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\obj\Debug\KeyboardExecuter.csproj.CoreCompileInputs.cache
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\obj\Debug\KeyboardExecuter.exe
+C:\Users\lorec\Source\Repos\KeyboardExecuter\KeyboardExecuter\obj\Debug\KeyboardExecuter.pdb
